@@ -1,0 +1,44 @@
+package model.units;
+
+import model.events.WorldListener;
+import model.infrastructure.ResidentialBuilding;
+import model.people.CitizenState;
+import model.people.Citizen;
+import simulation.Address;
+
+public class Evacuator extends PoliceUnit{
+	
+	
+	public Evacuator(String id, Address location, int stepsPerCycle,WorldListener worldListener,int maxCapacity) {
+		super(id,location,stepsPerCycle,worldListener,maxCapacity);
+	}
+
+	public void treat() {
+		super.treat();
+		if(getTarget() instanceof ResidentialBuilding) {
+			ResidentialBuilding rb = (ResidentialBuilding) getTarget();
+			for(int i = 0; i<getMaxCapacity() && rb.getOccupants().size()>0; i++) { 
+				getPassengers().add(rb.getOccupants().remove(i));
+			}
+		}
+	}
+	
+	public void goToBase() {
+			if(getDistanceToBase()>0) {
+				setDistanceToBase(getDistanceToBase()-getStepsPerCycle()<0? 0:getDistanceToBase()-getStepsPerCycle());
+			}else {
+				for(int i = 0; i<getPassengers().size(); i++) {
+					getPassengers().get(i).setState(CitizenState.RESCUED);
+					getWorldListener().assignAddress(getPassengers().remove(i),0,0);
+				}
+				
+				ResidentialBuilding rb = (ResidentialBuilding) getTarget();
+				if(rb.getOccupants().size()>0) {
+					int nextRound = Math.abs(rb.getLocation().getX()-getLocation().getX()) + Math.abs(rb.getLocation().getY()-getLocation().getY());
+					setDistanceToTarget(nextRound);
+				}
+			}
+	}
+	
+	
+}
