@@ -1,0 +1,112 @@
+package model.units;
+
+import model.events.SOSResponder;
+import model.events.WorldListener;
+import model.infrastructure.ResidentialBuilding;
+import model.people.Citizen;
+import model.people.CitizenState;
+import simulation.Address;
+import simulation.Rescuable;
+import simulation.Simulatable;
+
+public abstract class Unit implements Simulatable,SOSResponder {
+
+	private String unitID;//read only
+	private UnitState state;
+	private Address location;
+	private Rescuable target;//read only
+	private int distanceToTarget;
+	private int stepsPerCycle;//read only
+	private WorldListener worldListener;
+	
+	public Unit(String id, Address location, int stepsPerCycle, WorldListener simulator){
+		unitID=id;
+		this.location=location;
+		this.stepsPerCycle=stepsPerCycle;
+		this.state=state.IDLE;
+		worldListener = simulator;
+	}
+	
+	public void setDistanceToTarget(int distanceToTarget) {
+		this.distanceToTarget = distanceToTarget;
+	}
+
+	public String getUnitID() {
+		return unitID;
+	}
+
+	public UnitState getState() {
+		return state;
+	}
+
+	public void setState(UnitState state) {
+		this.state = state;
+	}
+
+	public Address getLocation() {
+		return location;
+	}
+
+	public void setLocation(Address location) {
+		this.location = location;
+	}
+
+	public Rescuable getTarget() {
+		return target;
+	}
+
+	public int getStepsPerCycle() {
+		return stepsPerCycle;
+	}
+	
+	public void setWorldListener(WorldListener worldListener) {
+		this.worldListener = worldListener;
+	}
+	
+	public WorldListener getWorldListener() {
+		return worldListener;
+	}
+	
+	public void cycleStep() {
+		
+		if(getState()==UnitState.RESPONDING) {
+			int oldDistance = distanceToTarget;
+			int newDistance = oldDistance-getStepsPerCycle()<0? 0:oldDistance-getStepsPerCycle();
+			if(newDistance==0) {
+				worldListener.assignAddress(this, getTarget().getLocation().getX(), getTarget().getLocation().getY()); 
+				treat();
+			}else if(newDistance!=0){
+				setDistanceToTarget(newDistance);
+			}else if(this instanceof Evacuator && this.getState()==UnitState.TREATING) {
+					ResidentialBuilding rb = (ResidentialBuilding) getTarget();
+					if(rb.getOccupants().size()>0 &((Evacuator)this).getPassengers().size()==((Evacuator)this).getMaxCapacity()) {
+						((Evacuator)this).setDistanceToBase(getLocation().getX() + getLocation().getY());
+						((Evacuator)this).goToBase();
+					}
+				} 
+		}	
+	}
+	
+	public void respond(Rescuable r) {};
+
+	public void treat() {
+		getTarget().getDisaster().setActive(false);
+		setState(UnitState.TREATING);
+	}
+	
+	
+	//A unit will NOT return to base once its job is done.
+	public void jobsDone() {
+		if(getTarget() instanceof Citizen) {
+			Citizen c = (Citizen) getTarget();
+			if(c.getHp()==100 || c.getState()==CitizenState.SAFE || c.getState()==CitizenState.DECEASED) 
+				setState(UnitState.IDLE);
+		}else {
+			ResidentialBuilding rb = (ResidentialBuilding) getTarget();
+			if(rb.getStructuralIntegrity()==0 || rb.getGasLevel()==100 || rb.getFoundationDamage()>=100 || rb.getGasLevel() == 0 || rb.getFireDamage() == 0 ) 
+				setState(UnitState.IDLE);
+		}
+	}
+	
+	
+}
