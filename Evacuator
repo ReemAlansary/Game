@@ -14,31 +14,27 @@ public class Evacuator extends PoliceUnit{
 	}
 
 	public void treat() {
-		super.treat();
+		super.treat();//how do i make it start treating in the next cycle?
 		if(getTarget() instanceof ResidentialBuilding) {
 			ResidentialBuilding rb = (ResidentialBuilding) getTarget();
-			for(int i = 0; i<getMaxCapacity() && rb.getOccupants().size()>0; i++) { 
+			for(int i = 0; i<rb.getOccupants().size() & i<getMaxCapacity(); i++) 
 				getPassengers().add(rb.getOccupants().remove(i));
-			}
 		}
 	}
 	
 	public void goToBase() {
-			if(getDistanceToBase()>0) {
-				setDistanceToBase(getDistanceToBase()-getStepsPerCycle()<0? 0:getDistanceToBase()-getStepsPerCycle());
-			}else {
-				for(int i = 0; i<getPassengers().size(); i++) {
-					getPassengers().get(i).setState(CitizenState.RESCUED);
-					getWorldListener().assignAddress(getPassengers().remove(i),0,0);
-				}
-				
-				ResidentialBuilding rb = (ResidentialBuilding) getTarget();
-				if(rb.getOccupants().size()>0) {
-					int nextRound = Math.abs(rb.getLocation().getX()-getLocation().getX()) + Math.abs(rb.getLocation().getY()-getLocation().getY());
-					setDistanceToTarget(nextRound);
-				}
+		if(getDistanceToBase()>0) {
+			setDistanceToBase(getDistanceToBase()-getStepsPerCycle());
+		}else {
+			for(Citizen c : getPassengers()) {
+				c.setState(CitizenState.RESCUED);
+				getWorldListener().assignAddress(c, 0, 0);
 			}
+			getWorldListener().assignAddress(this, 0, 0);
+			calculateDistanceToTarget();
+		}		
 	}
 	
 	
 }
+
