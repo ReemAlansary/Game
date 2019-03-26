@@ -67,27 +67,34 @@ public abstract class Unit implements Simulatable,SOSResponder {
 		return worldListener;
 	}
 	
-	public void cycleStep() {
-		
-		if(getState()==UnitState.RESPONDING) {
-			int oldDistance = distanceToTarget;
-			int newDistance = oldDistance-getStepsPerCycle()<0? 0:oldDistance-getStepsPerCycle();
-			if(newDistance==0) {
-				worldListener.assignAddress(this, getTarget().getLocation().getX(), getTarget().getLocation().getY()); 
-				treat();
-			}else if(newDistance!=0){
-				setDistanceToTarget(newDistance);
-			}else if(this instanceof Evacuator && this.getState()==UnitState.TREATING) {
-					ResidentialBuilding rb = (ResidentialBuilding) getTarget();
-					if(rb.getOccupants().size()>0 &((Evacuator)this).getPassengers().size()==((Evacuator)this).getMaxCapacity()) {
-						((Evacuator)this).setDistanceToBase(getLocation().getX() + getLocation().getY());
-						((Evacuator)this).goToBase();
-					}
-				} 
-		}	
+	public int calculateDistanceToTarget() {
+		return Math.abs(getTarget().getLocation().getX() - getLocation().getX()) +  Math.abs(getTarget().getLocation().getY() - getLocation().getY());
 	}
 	
-	public void respond(Rescuable r) {};
+	public void cycleStep() {
+		if(getState() == UnitState.RESPONDING) {
+			if(distanceToTarget>0) {
+				distanceToTarget-=getStepsPerCycle();
+			}
+			if(distanceToTarget<=0) {
+				worldListener.assignAddress(this,getTarget().getLocation().getX(), getTarget().getLocation().getY());
+				treat();
+			} 
+			if(this instanceof Evacuator) {
+				Evacuator e = (Evacuator) this;
+				if(e.getPassengers().size() == e.getMaxCapacity()) {
+					e.setDistanceToBase(e.getLocation().getX() + e.getLocation().getY());
+					e.goToBase();
+				}
+			}
+		}
+	}
+	
+	public void respond(Rescuable r) {
+		target = r;
+		state = UnitState.RESPONDING;
+		calculateDistanceToTarget();
+	}
 
 	public void treat() {
 		getTarget().getDisaster().setActive(false);
@@ -107,6 +114,10 @@ public abstract class Unit implements Simulatable,SOSResponder {
 				setState(UnitState.IDLE);
 		}
 	}
+	
+	
+}
+
 	
 	
 }
